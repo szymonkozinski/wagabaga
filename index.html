@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prywatna baza</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#eee;padding:10px;margin:0}
+button,input{padding:10px;margin:5px;cursor:pointer;font-size:1em}
+.hidden{display:none}
+.box{border:1px solid #444;padding:10px;margin-top:10px;overflow:auto}
+
+/* TABELA */
+table{border-collapse:collapse;width:100%}
+td{border:1px solid #555;min-width:60px;height:24px;background:#1a1a1a;color:#eee}
+
+/* LISTY */
+.list-item{display:flex;justify-content:space-between;align-items:center;background:#fff;color:#000;padding:8px;margin:6px 0;border-radius:4px;flex-wrap:wrap}
+.list-item.done{background:#b7f5b7}
+.trash{cursor:pointer}
+
+/* GALERIA */
+.folder, .photo{display:inline-block;margin:5px;padding:5px;border:1px solid #555;cursor:pointer}
+.photo img{max-width:100%;height:auto}
+#modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;flex-direction:column}
+#modal img{max-width:90%;max-height:80%}
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+<h2>Podaj hasło</h2>
+<input type="password" id="password" />
+<button onclick="doLogin()">Wejdź</button>
+</div>
+
+<div id="menu" class="hidden">
+<h2>Menu</h2>
+<button onclick="openSection('skladki')">SKŁADKI</button>
+<button onclick="openSection('zdjecia')">ZDJĘCIA</button>
+<button onclick="openSection('kategoryzacja')">KATEGORYZACJA</button>
+<button onclick="openSection('stopnie')">STOPNIE</button>
+<button onclick="openSection('sprawnosci')">SPRAWNOŚCI</button>
+<button onclick="openSection('slownik')">SŁOWNIK</button>
+<button onclick="openSection('extra1')">EXTRA</button>
+<button onclick="openSection('extra2')">EXTRA</button>
+<button onclick="openSection('extra3')">EXTRA</button>
+</div>
+
+<div id="content" class="hidden">
+<button onclick="back()">← Wróć</button>
+<div id="skladki" class="box hidden"></div>
+<div id="stopnie" class="box hidden"></div>
+<div id="sprawnosci" class="box hidden"></div>
+<div id="extra1" class="box hidden"></div>
+<div id="extra2" class="box hidden"></div>
+<div id="extra3" class="box hidden"></div>
+
+<div id="zdjecia" class="box hidden">
+<h3>ZDJĘCIA</h3>
+<div id="galleryControls">
+<input type="text" id="folderName" placeholder="Nazwa folderu" />
+<button onclick="addFolder()">➕ Folder</button>
+<input type="file" id="photoInput" accept="image/*" onchange="addPhoto(event)" />
+</div>
+<div id="gallery"></div>
+</div>
+
+<div id="kategoryzacja" class="box hidden">
+<h3>KATEGORYZACJA</h3>
+<input id="taskInput" placeholder="Nowe zadanie" />
+<button onclick="addTask()">Dodaj</button>
+<div id="tasks"></div>
+</div>
+
+<div id="slownik" class="box hidden">
+<h3>SŁOWNIK</h3>
+<input id="wordInput" placeholder="Nowy wpis" />
+<button onclick="addWord()">Dodaj</button>
+<div id="words"></div>
+</div>
+</div>
+
+<div id="modal">
+<img id="modalImg" />
+<button onclick="deletePhoto()">🗑️ Usuń</button>
+<button onclick="closeModal()">Zamknij</button>
+</div>
+
+<script>
+const PASS="NikodemPodjasek123";
+let currentImg=null;
+let currentFolder=null;
+let galleryState={folders:[], photos:[]};
+
+function doLogin(){if(password.value===PASS){loginBox.classList.add('hidden');menu.classList.remove('hidden');} else alert('Złe hasło');}
+function openSection(id){menu.classList.add('hidden');content.classList.remove('hidden');document.querySelectorAll('.box').forEach(b=>b.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');if(id==='zdjecia') renderGallery();}
+function back(){content.classList.add('hidden');menu.classList.remove('hidden');}
+function makeTable(el){const t=document.createElement('table');for(let i=0;i<50;i++){const r=t.insertRow();for(let j=0;j<20;j++){const c=r.insertCell();c.contentEditable=true;c.ondblclick=()=>{const col=prompt('Kolor komórki:');if(col)c.style.background=col;};}}el.appendChild(t);}['skladki','stopnie','sprawnosci','extra1','extra2','extra3'].forEach(id=>makeTable(document.getElementById(id)));
+
+function renderGallery(){gallery.innerHTML=''; if(currentFolder){const backBtn=document.createElement('button');backBtn.textContent='← Wszystkie foldery';backBtn.onclick=()=>{currentFolder=null; renderGallery();};gallery.appendChild(backBtn); const delBtn=document.createElement('button');delBtn.textContent='🗑️ Usuń folder';delBtn.onclick=()=>{galleryState.folders=galleryState.folders.filter(f=>f.name!==currentFolder);currentFolder=null;renderGallery();};gallery.appendChild(delBtn); galleryState.folders.find(f=>f.name===currentFolder).photos.forEach(p=>addPhotoElement(p));} else{galleryState.folders.forEach(f=>{const d=document.createElement('div');d.className='folder';d.textContent='📁 '+f.name;d.onclick=()=>{currentFolder=f.name;renderGallery();};gallery.appendChild(d);}); galleryState.photos.forEach(p=>addPhotoElement(p));} photoInput.style.display=currentFolder? 'block':'block'; folderName.style.display=currentFolder? 'none':'inline-block';}
+function addFolder(){if(!folderName.value)return;galleryState.folders.push({name:folderName.value,photos:[]});folderName.value='';renderGallery();}
+function addPhoto(e){const file=e.target.files[0];if(!file)return;const src=URL.createObjectURL(file);if(currentFolder){galleryState.folders.find(f=>f.name===currentFolder).photos.push(src);}else{galleryState.photos.push(src);}renderGallery();}
+function addPhotoElement(src){const d=document.createElement('div');d.className='photo';const img=document.createElement('img');img.src=src;img.onclick=()=>openModal(img,src);d.appendChild(img);gallery.appendChild(d);}
+function openModal(img,src){currentImg={img,src};modalImg.src=src;modal.style.display='flex';}
+function closeModal(){modal.style.display='none';currentImg=null;}
+function deletePhoto(){if(!currentImg)return;if(currentFolder){const f=galleryState.folders.find(f=>f.name===currentFolder);f.photos=f.photos.filter(p=>p!==currentImg.src);}else{galleryState.photos=galleryState.photos.filter(p=>p!==currentImg.src);}renderGallery();closeModal();}
+function addTask(){if(!taskInput.value)return;const d=document.createElement('div');d.className='list-item';d.innerHTML=`<span>${taskInput.value}</span><div><input type='checkbox'> <span class='trash'>🗑️</span></div>`;const cb=d.querySelector('input');cb.onchange=()=>d.classList.toggle('done',cb.checked);d.querySelector('.trash').onclick=()=>d.remove();tasks.appendChild(d);taskInput.value='';}
+function addWord(){if(!wordInput.value)return;const d=document.createElement('div');d.className='list-item';d.innerHTML=`<span>${wordInput.value}</span><span class='trash'>🗑️</span>`;d.querySelector('.trash').onclick=()=>d.remove();words.appendChild(d);wordInput.value='';}
+</script>
+
+</body>
+</html>
